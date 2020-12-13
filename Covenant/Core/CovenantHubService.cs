@@ -33,7 +33,7 @@ namespace Covenant.Core
                 }
             };
             _connection = new HubConnectionBuilder()
-                .WithUrl("https://localhost:7443/covenantHub", options =>
+                .WithUrl("https://localhost:" + configuration["CovenantPort"] + "/covenantHub", options =>
                 {
                     options.AccessTokenProvider = () => { return Task.FromResult(configuration["ServiceUserToken"]); };
                     options.HttpMessageHandlerFactory = inner =>
@@ -265,6 +265,11 @@ namespace Covenant.Core
             return _connection.InvokeAsync<CapturedTicketCredential>("CreateTicketCredential", credential);
         }
 
+        public Task<Theme> CreateTheme(Theme theme)
+        {
+            return _connection.InvokeAsync<Theme>("CreateTheme", theme);
+        }
+
         public Task<CovenantUser> CreateUser(CovenantUserLogin login)
         {
             return _connection.InvokeAsync<CovenantUser>("CreateUser", login);
@@ -348,6 +353,11 @@ namespace Covenant.Core
         public Task DeleteReferenceSourceLibrary(int id)
         {
             return _connection.InvokeAsync("DeleteReferenceSourceLibrary", id);
+        }
+
+        public Task DeleteTheme(int id)
+        {
+            return _connection.InvokeAsync("DeleteTheme", id);
         }
 
         public Task DeleteUser(string userId)
@@ -505,9 +515,19 @@ namespace Covenant.Core
             return _connection.InvokeAsync<CapturedTicketCredential>("EditTicketCredential", credential);
         }
 
-        public Task<CovenantUser> EditUser(CovenantUser currentUser, CovenantUserLogin user)
+        public Task<Theme> EditTheme(Theme theme)
         {
-            return _connection.InvokeAsync<CovenantUser>("EditUser", currentUser, user);
+            return _connection.InvokeAsync<Theme>("EditTheme", theme);
+        }
+
+        public Task<CovenantUser> EditUser(CovenantUser currentUser)
+        {
+            return _connection.InvokeAsync<CovenantUser>("EditUser", currentUser);
+        }
+
+        public Task<CovenantUser> EditUserPassword(CovenantUser currentUser, CovenantUserLogin user)
+        {
+            return _connection.InvokeAsync<CovenantUser>("EditUserPassword", currentUser, user);
         }
 
         public Task<WmicLauncher> EditWmicLauncher(WmicLauncher launcher)
@@ -765,9 +785,9 @@ namespace Covenant.Core
             return _connection.InvokeAsync<Grunt>("GetGruntByGUID", guid);
         }
 
-        public Task<Grunt> GetGruntByName(string name, StringComparison compare = StringComparison.CurrentCulture)
+        public Task<Grunt> GetGruntByName(string name)
         {
-            return _connection.InvokeAsync<Grunt>("GetGruntByName", name, compare);
+            return _connection.InvokeAsync<Grunt>("GetGruntByName", name);
         }
 
         public Task<Grunt> GetGruntByOriginalServerGUID(string serverguid)
@@ -1088,6 +1108,16 @@ namespace Covenant.Core
         public Task<IEnumerable<TargetIndicator>> GetTargetIndicators()
         {
             return _connection.InvokeAsync<IEnumerable<TargetIndicator>>("GetTargetIndicators");
+        }
+
+        public Task<Theme> GetTheme(int id)
+        {
+            return _connection.InvokeAsync<Theme>("GetTheme", id);
+        }
+
+        public Task<IEnumerable<Theme>> GetThemes()
+        {
+            return _connection.InvokeAsync<IEnumerable<Theme>>("GetThemes");
         }
 
         public Task<CapturedTicketCredential> GetTicketCredential(int credentialId)

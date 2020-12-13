@@ -45,7 +45,10 @@ namespace Covenant.Models.Listeners
                         .ToString()
                 };
             }
-            catch (SocketException) { }
+            catch (SocketException)
+            {
+                this.ConnectAddresses = new List<string> { "" };
+            }
         }
 
         public BridgeListener(ListenerType type, Profile profile) : this(type.Id, profile.Id)
@@ -57,7 +60,7 @@ namespace Covenant.Models.Listeners
         public override CancellationTokenSource Start()
         {
             this.InternalListener = new InternalListener();
-            _ = this.InternalListener.Configure(InternalListener.ToProfile(this.Profile), this.GUID, this.CovenantToken);
+            _ = this.InternalListener.Configure(InternalListener.ToProfile(this.Profile), this.GUID, this.CovenantUrl, this.CovenantToken);
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             Task.Run(() => this.Run(cancellationTokenSource.Token));
             return cancellationTokenSource;

@@ -51,19 +51,19 @@ main {
     color: #333;
 }
 
-    .sidebar .nav-link .fe {
-        margin-right: 4px;
-        color: #999;
-    }
+.sidebar .nav-link .fe {
+    margin-right: 4px;
+    color: #999;
+}
 
-    .sidebar .nav-link.active {
-        color: #007bff;
-    }
+.sidebar .nav-link.active {
+    color: #007bff;
+}
 
-        .sidebar .nav-link:hover .fe,
-        .sidebar .nav-link.active .fe {
-            color: inherit;
-        }
+.sidebar .nav-link:hover .fe,
+.sidebar .nav-link.active .fe {
+    color: inherit;
+}
 
 .sidebar-heading {
     font-size: .75rem;
@@ -91,6 +91,34 @@ main {
     opacity: 1.0;
 }
 
+@-webkit-keyframes spin-animation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(359deg); }
+}
+
+@-moz-keyframes spin-animation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(359deg); }
+}
+
+@-o-keyframes spin-animation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(359deg); }
+}
+
+@keyframes spin-animation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(359deg); }
+}
+
+.spin {
+    -webkit-animation: spin-animation 1s infinite;
+    -moz-animation: spin-animation 1s infinite;
+    -o-animation: spin-animation 1s infinite;
+    animation: spin-animation 1s infinite;
+    display: inline-block;
+}
+
 .grunt-interact {
     display: flex;
     flex-wrap: wrap;
@@ -114,19 +142,10 @@ main {
     background-color: #F5F5F5
 }
 
-.grunt-interact::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+.grunt-interact::placeholder,
+.grunt-interact::-ms-input-placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     color: white;
     opacity: 0.8; /* Firefox */
-}
-
-.grunt-interact::-ms-input-placeholder { /* Internet Explorer 10-11 */
-    color: white;
-    opacity: 0.8;
-}
-
-.grunt-interact::-ms-input-placeholder { /* Microsoft Edge */
-    color: white;
-    opacity: 0.8;
 }
 
 .twitter-typeahead {
@@ -182,13 +201,11 @@ main {
 }
 
 .task-card {
-    background: rgba(255, 255, 255, 0);
     font-family: 'Source Code Pro', monospace;
     letter-spacing: -0.25px;
 }
 
 .task-card:hover, .task-card:focus {
-    background: rgba(255, 255, 255, 0.015);
 }
 
 .task-button {
@@ -219,16 +236,10 @@ main {
     color: white;
 }
 
-#interact-input:focus {
-    -webkit-box-shadow: none;
-    outline: -webkit-focus-ring-color auto 0px;
-}
-
 .CodeMirror {
     /* Bootstrap Settings */
     box-sizing: border-box;
     margin: 0;
-    overflow: auto;
     display: block;
     width: 100%;
     padding: 0px 12px 6px 0px;
